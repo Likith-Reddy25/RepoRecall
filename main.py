@@ -4,6 +4,8 @@ from fastapi import FastAPI, BackgroundTasks, Request
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from pydantic import BaseModel
+from hybrid_retrieval import answer_code_question
 
 app= FastAPI(title= "Codebase RAG Live Sync")
 
@@ -83,6 +85,17 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
         return {"status": "processing", "commits_count": len(commits)}
     
     return {"status": "ignored", "reason":"No commit payload present"}
+
+class ChatRequest(BaseModel):
+    query:str
+
+@app.post("/chat")
+def chat_endpoint(request: ChatRequest):
+    response= answer_code_question(request.query)
+    
+    return {"query": request.query, "response":response}
+
+
 
 
 if __name__=="__main__":

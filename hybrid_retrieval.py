@@ -18,7 +18,7 @@ vector_store= Chroma(
 )
 
 # llm= GoogleGenerativeAI(model="gemini-3.5-flash-lite")
-llm= ChatGroq(model="openai/gpt-oss-20b")
+llm= ChatGroq(model="openai/gpt-oss-120b")
 
 
 # Initialise the local Flashrank model
