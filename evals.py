@@ -8,16 +8,15 @@ from hybrid_retrieval import hybrid_code_search
 
 load_dotenv()
 
-# 🔹 LLM (same as your RAG)
+
 llm = ChatGroq(
     model="qwen/qwen3.6-27b",
     temperature=0
 )
 
-# 🔹 Embedding model (LOCAL, FREE)
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-# 🔹 Test dataset
+
 test_cases = [
     {
         "question": "How is HTTPException defined or handled?",
@@ -47,6 +46,29 @@ def keyword_recall(contexts, keywords):
     return hits / len(keywords)
 
 
+from sentence_transformers import SentenceTransformer, util
+import numpy as np
+
+embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def compute_context_precision(retrieved_chunks, ground_truth):
+    """
+    Precision = relevant retrieved / total retrieved
+    """
+    gt_embedding = embed_model.encode(ground_truth, convert_to_tensor=True)
+    retrieved_embeddings = embed_model.encode(retrieved_chunks, convert_to_tensor=True)
+
+    scores = util.cos_sim(gt_embedding, retrieved_embeddings)[0].cpu().numpy()
+
+    # threshold for relevance (tune this)
+    threshold = 0.5
+
+    relevant_count = np.sum(scores > threshold)
+    total_count = len(retrieved_chunks)
+
+    precision = relevant_count / total_count if total_count > 0 else 0
+    return precision
+
 import re
 
 def llm_judge(question, answer, ground_truth):
@@ -59,17 +81,17 @@ Ground Truth: {ground_truth}
 
 Give a score between 0 and 1 for correctness.
 
-Return ONLY a number like:
-0.0
-0.5
-0.8
+Return a number like
+0
+0.2
+0.3
 1.0
 """
 
     response = llm.invoke(prompt)
     text = response.content if hasattr(response, "content") else str(response)
 
-    # 🔥 Extract number safely
+    #  Extract number safely
     match = re.search(r"\d+(\.\d+)?", text)
 
     if match:
@@ -88,6 +110,7 @@ def run_eval():
     total_sim = 0
     total_recall = 0
     total_llm_score = 0
+    precision_scores = []
 
     for i, item in enumerate(test_cases):
         q = item["question"]
@@ -99,7 +122,10 @@ def run_eval():
 
         # 🔍 Retrieval
         retrieved_chunks = hybrid_code_search(q, top_k=3)
-        contexts = [c["text"] for c in retrieved_chunks]
+        contexts = [chunk["text"] for chunk in retrieved_chunks]
+        if not contexts:
+            print("⚠️ No context retrieved")
+            continue
 
         context_str = "\n".join(contexts)
 
@@ -124,12 +150,16 @@ Question: {q}
         recall = keyword_recall(contexts, keywords)
         judge = llm_judge(q, answer, gt)
 
+        precision = compute_context_precision(contexts, gt)
+        precision_scores.append(precision)
+
         total_sim += sim
         total_recall += recall
         total_llm_score += judge
 
         print(f"Embedding Similarity: {sim:.3f}")
         print(f"Context Recall: {recall:.3f}")
+        print(f"Context Precision: {precision:.3f}")
         print(f"LLM Judge Score: {judge:.3f}")
 
     n = len(test_cases)
@@ -137,6 +167,7 @@ Question: {q}
     print("\n===== FINAL SCORES =====")
     print(f"Avg Embedding Similarity: {total_sim/n:.3f}")
     print(f"Avg Context Recall: {total_recall/n:.3f}")
+    print(f"Avg Context Precision: {np.mean(precision_scores):.3f}")
     print(f"Avg LLM Judge Score: {total_llm_score/n:.3f}")
 
 
