@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 from rank_bm25 import BM25Okapi
 from flashrank import Ranker, RerankRequest
-from langchain_google_genai import GoogleGenerativeAI
+# from langchain_google_genai import GoogleGenerativeAI
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
@@ -23,6 +23,19 @@ llm= ChatGroq(model="openai/gpt-oss-120b")
 
 # Initialise the local Flashrank model
 ranker= Ranker(model_name="ms-marco-MiniLM-L-12-v2")
+
+def route_query(query:str)->str:
+    """Classifies whether query needs repository level or normal LLM Knowledge"""
+    system_prompt=f"""You are query classifier.
+    Determine if the user's question requires local repository files or if it's a general question/greeting.
+    Respond with ONLY ONE WORD:
+    -'CODEBASE': If the user asks about specific files, architecture, or functions in this repository
+    -'GENERAL': If the user is saying hello, asking general questions, python concepts or chit-chatting
+    """
+
+    # decision= llm.invoke(f"{system_prompt}\nQuery:{query}").content.strip().upper()
+    # return "CODEBASE" if "CODEBASE" in decision else "GENERAL"
+
 
 def hybrid_code_search(query: str, top_k: int = 5):
     print(f"\nSearching for '{query}'")
@@ -139,11 +152,29 @@ def hybrid_code_search(query: str, top_k: int = 5):
     return top_results
 
 def answer_code_question(query: str):
+
+    # Step 1: Decide route
+    route= route_query(query)
+
+    # Step 2A: If general question skip VECTOR DB
+    if route=="GENERAL":
+        response= llm.invoke(query)
+        return {
+            "answer": response.content,
+            "sources":[] 
+            # No repo file needed
+        }
+    
+    # Step 2B: If the question is related to code base.
+
     # Retrieve the valid chunks
     retrieved_chunks= hybrid_code_search(query, top_k=3)
 
     if not retrieved_chunks:
-        return "No relevant code found in the repository."
+        response= llm.invoke(
+            f"The user has asked: '{query}'. No exact code matches wew found in the repo. Answer as best as you can generally, but specify that no repo file matched. Please tell the user that the content generated in from the repo only.")
+        return {"answer": response.content,
+                "sources":[]}
     
     context_str = ""
     for idx, item in enumerate(retrieved_chunks, 1):
