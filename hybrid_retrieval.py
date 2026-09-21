@@ -33,8 +33,8 @@ def route_query(query:str)->str:
     -'GENERAL': If the user is saying hello, asking general questions, python concepts or chit-chatting
     """
 
-    decision= llm.invoke(f"{system_prompt}\nQuery:{query}").content.strip().upper()
-    return "CODEBASE" if "CODEBASE" in decision else "GENERAL"
+    # decision= llm.invoke(f"{system_prompt}\nQuery:{query}").content.strip().upper()
+    # return "CODEBASE" if "CODEBASE" in decision else "GENERAL"
 
 
 def hybrid_code_search(query: str, top_k: int = 5):
