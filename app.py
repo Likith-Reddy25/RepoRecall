@@ -25,7 +25,7 @@ st.markdown("""
 
 # ----------------- SIDEBAR -----------------
 with st.sidebar:
-    st.title("⚡ RepoRecall Ops")
+    st.title("⚡ RepoRecall ")
     st.caption("Event-Driven Codebase RAG & Sync")
     
     # Check Backend Status
