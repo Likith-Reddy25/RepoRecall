@@ -1,0 +1,14 @@
+streamlit
+fastapi
+uvicorn
+requests
+python-dotenv
+langchain-chroma
+langchain-huggingface
+langchain-text-splitters
+langchain-groq
+rank-bm25
+flashrank
+sentence-transformers
+scikit-learn
+pydantic
