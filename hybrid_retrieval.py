@@ -157,13 +157,13 @@ def answer_code_question(query: str):
     route= route_query(query)
 
     # Step 2A: If general question skip VECTOR DB
-    if route=="GENERAL":
-        response= llm.invoke(query)
-        return {
-            "answer": response.content,
-            "sources":[] 
-            # No repo file needed
-        }
+    # if route=="GENERAL":
+    #     response= llm.invoke(query)
+    #     return {
+    #         "answer": response.content,
+    #         "sources":[] 
+    #         # No repo file needed
+    #     }
     
     # Step 2B: If the question is related to code base.
 
